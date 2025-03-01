@@ -30,7 +30,11 @@ item_boxes = {
     "Health": health_box    
 }
 TILESIZE = 50
-
+font = pygame.font.SysFont("Futura", 40)
+def draw_text(text,font,text_color,x,y):
+    img = font.render(text, True, text_color)
+    screen.blit(img, (x, y))
+   
 # Background function
 def drawbg():
     screen.fill((0, 0, 0))
@@ -192,6 +196,21 @@ bullets_group = pygame.sprite.Group()
 granade_group = pygame.sprite.Group()
 item_box_group = pygame.sprite.Group()
 
+class Healthbar():
+    def __init__(self, x, y, health, max_health):
+        self.x = x
+        self.y = y
+        self.health = health
+        self.max_health = max_health
+
+    def draw(self, health):
+        self.health = health
+        ratio = self.health / self.max_health
+        pygame.draw.rect(screen, (255, 255, 255), (self.x-2, self.y-2, 154, 24))
+        pygame.draw.rect(screen, (255, 0, 0), (self.x, self.y, 150, 20))
+        pygame.draw.rect(screen, (0, 255, 0), (self.x, self.y, 150 * ratio, 20))
+
+
 # Soldier class
 class Soldier(pygame.sprite.Sprite):
     def __init__(self, char_type, x, y, scale, speed, ammo, granades):
@@ -317,9 +336,11 @@ class Soldier(pygame.sprite.Sprite):
 
     def draw(self):
         screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
+        
 
 # Create player and enemy
 player = Soldier("player", 200, 400, 3, 6, 20, 5)
+health_bar = Healthbar(120, 95, player.health, player.max_health)
 enemy = Soldier("enemy", 400, 600, 3, 6, 20, 0)
 enemy2 = Soldier("enemy", 600, 600, 3, 6, 20, 0)
 enemy_group.add(enemy)
@@ -331,6 +352,7 @@ health_drop = Drops(500, 600, "Health")
 grenade_drop = Drops(600, 600, "Grenade")
 item_box_group.add(ammo_drop, health_drop, grenade_drop)
 
+
 # Game loop
 run = True
 while run:
@@ -338,6 +360,16 @@ while run:
 
     # Drawing
     drawbg()
+    #show ammo
+    draw_text(f"AMMO:", font, (255, 255, 255), 10, 10)
+    for x in range(player.ammo):
+        screen.blit(bullet_img, (120 + (x * 20), 20))    #show granades
+    draw_text(f"GRANADES: ", font, (255, 255, 255), 10, 50)
+    for x in range(player.granades):
+        screen.blit(grenade_img, (190 + (x * 20), 55))
+    #show health
+    draw_text(f"Health: ", font, (255, 255, 255), 10, 90)
+    health_bar.draw(player.health)
     player.update()
     player.draw()
     item_box_group.update()

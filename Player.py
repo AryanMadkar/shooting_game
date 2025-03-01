@@ -1,15 +1,10 @@
-import pygame 
-from Bullets import Bullets, bullets_group
-from Granade import Grenade,granade_group
+import pygame
 import os
-pygame.init()
+from Setting import SCREEN_HEIGHT, SCREEN_WIDTH, TILESIZE, bullet_img, grenade_img
 
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = int(SCREEN_WIDTH * 0.8)
 class Soldier(pygame.sprite.Sprite):
-    def __init__(self, char_type, x, y, scale, speed, ammo,granades,screen):
+    def __init__(self, char_type, x, y, scale, speed, ammo, granades):
         pygame.sprite.Sprite.__init__(self)
-        self.screen =screen
         self.char_type = char_type
         self.aliveplayer = True
         self.animation_list = []
@@ -34,9 +29,9 @@ class Soldier(pygame.sprite.Sprite):
         animation_types = ["Idle", "Run", "Jump", "Death"]
         for animation in animation_types:
             frame_list = []
-            num_frames = len(os.listdir(f"game/Shooter/img/{self.char_type}/{animation}"))
+            num_frames = len(os.listdir(f"assets/img/{self.char_type}/{animation}"))
             for i in range(num_frames):
-                img = pygame.image.load(f"game/Shooter/img/{self.char_type}/{animation}/{i}.png").convert_alpha()
+                img = pygame.image.load(f"assets/img/{self.char_type}/{animation}/{i}.png").convert_alpha()
                 img = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
                 frame_list.append(img)
             self.animation_list.append(frame_list)
@@ -99,12 +94,6 @@ class Soldier(pygame.sprite.Sprite):
             bullet = Bullets(self.rect.centerx + (0.6 * self.rect.size[0] * self.direction), self.rect.centery, self.direction, self.char_type)
             bullets_group.add(bullet)
             self.ammo -= 1
-    def shootgranade(self):
-        if self.shoot_undecooldown == 0 and self.granades > 0:
-            self.shoot_undecooldown = 100
-            granade = Grenade(self.rect.centerx + (0.6 * self.rect.size[0] * self.direction), self.rect.centery, self.direction)
-            granade_group.add(granade)
-            self.granades -= 1
 
     def update_animation(self):
         ANIMATION_COOLDOWN = 100
@@ -136,4 +125,4 @@ class Soldier(pygame.sprite.Sprite):
             self.update_action(3)
 
     def draw(self):
-        self.screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
+        screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
