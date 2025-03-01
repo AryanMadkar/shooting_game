@@ -5,14 +5,15 @@ import csv
 pygame.init()
 
 # Screen setup
-SCREEN_WIDTH = 1366
-SCREEN_HEIGHT = 768
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = int(SCREEN_WIDTH*0.8)
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Shooter")
 
 clock = pygame.time.Clock()
 FPS = 60
 level = "1"
+THRESHOLD = 200
 ROWS = 16
 COLS = 150
 TILESIZE = SCREEN_HEIGHT//ROWS
@@ -30,8 +31,21 @@ for x in range(TILETYPES):
     img = pygame.transform.scale(img,(TILESIZE,TILESIZE))
     image_list.append(img)
 
-
 # Load images
+
+pine1 = pygame.image.load(r"game\Shooter\img\background\pine1.png").convert_alpha()
+
+pine2 = pygame.image.load(r"game\Shooter\img\background\pine2.png").convert_alpha()
+
+mountain = pygame.image.load(r"game\Shooter\img\background\mountain.png").convert_alpha()
+# mountain = pygame.transform.scale(mountain,(SCREEN_WIDTH,SCREEN_HEIGHT))
+
+cloud = pygame.image.load(r"game\Shooter\img\background\sky_cloud.png").convert_alpha()
+cloud = pygame.transform.scale(cloud,(SCREEN_WIDTH,SCREEN_HEIGHT))
+
+skyimage = pygame.image.load(r"game\Shooter\img\background\sky.png").convert_alpha()
+skyimage = pygame.transform.scale(skyimage,(SCREEN_WIDTH,SCREEN_HEIGHT))
+
 bullet_img = pygame.image.load("game/Shooter/img/icons/bullet.png").convert_alpha()
 grenade_img = pygame.image.load("game/Shooter/img/icons/grenade.png").convert_alpha()
 ammo_box = pygame.image.load("game/Shooter/img/icons/ammo_box.png").convert_alpha()
@@ -50,6 +64,10 @@ def draw_text(text,font,text_color,x,y):
 # Background function
 def drawbg():
     screen.fill((0, 0, 0))
+    screen.blit(skyimage, (0, 0))
+    screen.blit(mountain, (0, SCREEN_HEIGHT-mountain.get_height()-300 ))
+    screen.blit(pine1, (0, SCREEN_HEIGHT-pine1.get_height()-150 ))
+    screen.blit(pine2, (0, SCREEN_HEIGHT-pine2.get_height() ))
 
 # Drop class
 class Drops(pygame.sprite.Sprite):
@@ -81,6 +99,8 @@ class Drops(pygame.sprite.Sprite):
                 player.health = player.max_health  # Cap health to max value
 
 # Grenade class
+
+
 class Grenade(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         pygame.sprite.Sprite.__init__(self)
@@ -104,19 +124,37 @@ class Grenade(pygame.sprite.Sprite):
         self.rect.x += self.direction * self.speed
         self.rect.y += self.vel_y
 
-        # Bounce off the ground
-        if self.rect.bottom >= SCREEN_HEIGHT:
-            self.rect.bottom = SCREEN_HEIGHT  # Ensure it stays on the screen
-            self.vel_y = -self.vel_y * self.bounce_factor  # Reverse velocity with energy loss
-            
-            # Stop bouncing when velocity is too low
-            if abs(self.vel_y) < 2:
-                self.vel_y = 0
-                self.speed = 0  # Stop moving horizontally too
+        # Check for collisions with tiles
+        for tile in world.opsticle_list:
+            if tile[1].colliderect(self.rect):
+                # Collision in the x direction
+                if self.direction > 0:  # Moving right
+                    self.rect.right = tile[1].left
+                    self.direction *= -1  # Reverse direction
+                elif self.direction < 0:  # Moving left
+                    self.rect.left = tile[1].right
+                    self.direction *= -1  # Reverse direction
 
-        # Bounce off the sides
-        if self.rect.left <= 0 or self.rect.right >= SCREEN_WIDTH:
-            self.direction *= -1  # Reverse horizontal direction
+                # Collision in the y direction
+                if self.vel_y > 0:  # Falling
+                    self.rect.bottom = tile[1].top
+                    self.vel_y = -self.vel_y * self.bounce_factor  # Bounce
+                elif self.vel_y < 0:  # Rising
+                    self.rect.top = tile[1].bottom
+                    self.vel_y = 0  # Stop upward movement
+
+        # Bounce off the screen edges
+        if self.rect.left <= 0:
+            self.rect.left = 0
+            self.direction *= -1  # Reverse direction
+        if self.rect.right >= SCREEN_WIDTH:
+            self.rect.right = SCREEN_WIDTH
+            self.direction *= -1  # Reverse direction
+
+        # Stop bouncing when velocity is too low
+        if abs(self.vel_y) < 2 and self.rect.bottom >= SCREEN_HEIGHT - 10:
+            self.vel_y = 0
+            self.speed = 0  # Stop moving horizontally
 
         # Check for collision with player or enemy
         if pygame.sprite.collide_rect(self, player) and player.aliveplayer:
@@ -131,7 +169,7 @@ class Grenade(pygame.sprite.Sprite):
                 self.kill()  # Remove the grenade
                 explosion = Explosion(self.rect.x, self.rect.y, 2)
                 explosion_group.add(explosion)
-        
+
         # Countdown timer
         self.timer -= 1
         if self.timer <= 0:
@@ -143,7 +181,7 @@ class Grenade(pygame.sprite.Sprite):
             for enemy in enemy_group:
                 if self.rect.centerx - enemy.rect.centerx < TILESIZE * 2 and self.rect.centerx - enemy.rect.centerx > -100:
                     enemy.health -= 50
-                
+ 
 enemy_group = pygame.sprite.Group()
 
 class Explosion(pygame.sprite.Sprite):
@@ -193,6 +231,10 @@ class Bullets(pygame.sprite.Sprite):
         if self.shooter == "enemy" and pygame.sprite.collide_rect(self, player) and player.aliveplayer:
             player.health -= 5  # Reduce player health
             self.kill()  # Remove the bullet
+            
+        for tile in world.opsticle_list:
+            if tile[1].colliderect(self.rect):
+                self.kill()  # Remove the bullet
 
         # Check for collision with the enemy (if fired by player)
         if self.shooter == "player":
@@ -449,10 +491,10 @@ class World():
                         decoration = Decoration(img, x*TILESIZE, y*TILESIZE)
                         decoration_group.add(decoration)
                     elif tile == 15:
-                        player = Soldier("player", x*TILESIZE, y*TILESIZE, 3, 6, 20, 5)
+                        player = Soldier("player", x*TILESIZE, y*TILESIZE, 2.3, 5, 20, 5)
                         health_bar = Healthbar(120, 95, player.health, player.max_health)
                     elif tile == 16:
-                        enemy = Soldier("enemy", x*TILESIZE, y*TILESIZE, 3, 2, 20, 0)
+                        enemy = Soldier("enemy", x*TILESIZE, y*TILESIZE, 2.3, 2, 20, 0)
                         enemy_group.add(enemy)
                     elif tile == 17:
                         ammo_drop = Drops(x*TILESIZE, y*TILESIZE, "Ammo")
