@@ -4,8 +4,8 @@ import os
 pygame.init()
 
 # Screen setup
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = int(SCREEN_WIDTH * 0.8)
+SCREEN_WIDTH = 1366
+SCREEN_HEIGHT = 768
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Shooter")
 
@@ -21,11 +21,48 @@ granade = False
 # Load images
 bullet_img = pygame.image.load("game/Shooter/img/icons/bullet.png").convert_alpha()
 grenade_img = pygame.image.load("game/Shooter/img/icons/grenade.png").convert_alpha()
+ammo_box = pygame.image.load("game/Shooter/img/icons/ammo_box.png").convert_alpha()
+grenade_box = pygame.image.load("game/Shooter/img/icons/grenade_box.png").convert_alpha()
+health_box = pygame.image.load("game/Shooter/img/icons/health_box.png").convert_alpha()
+item_boxes = {
+    "Ammo": ammo_box,
+    "Grenade": grenade_box,
+    "Health": health_box    
+}
 TILESIZE = 50
 
 # Background function
 def drawbg():
     screen.fill((0, 0, 0))
+
+# Drop class
+class Drops(pygame.sprite.Sprite):
+    def __init__(self, x, y, item_type):
+        pygame.sprite.Sprite.__init__(self)
+        self.item_type = item_type
+        self.image = item_boxes[self.item_type]
+        self.rect = self.image.get_rect()
+        self.rect.midtop = (x + TILESIZE // 2, y + (TILESIZE - self.image.get_height()) // 2)
+
+    def update(self):
+        # Check for collision with the player
+        if pygame.sprite.collide_rect(self, player):
+            self.apply_effect(player)
+            self.kill()  # Remove the item after pickup
+
+    def apply_effect(self, player):
+        if self.item_type == "Ammo":
+            player.ammo += 10  # Add 10 ammo
+            if player.ammo > player.startammo:
+                player.ammo = player.startammo  # Cap ammo to starting value
+        elif self.item_type == "Grenade":
+            player.granades += 2  # Add 2 grenades
+            if player.granades > player.maxgranades:
+                player.granades = player.maxgranades  # Cap grenades to max value
+        elif self.item_type == "Health":
+            player.health += 25  # Add 25 health
+            if player.health > player.max_health:
+                player.health = player.max_health  # Cap health to max value
 
 # Grenade class
 class Grenade(pygame.sprite.Sprite):
@@ -95,12 +132,12 @@ class Grenade(pygame.sprite.Sprite):
 enemy_group = pygame.sprite.Group()
 
 class Explosion(pygame.sprite.Sprite):
-    def __init__(self, x, y,scale):
+    def __init__(self, x, y, scale):
         pygame.sprite.Sprite.__init__(self)
         self.images = []
         for num in range(1, 6):
             img = pygame.image.load(f"game/Shooter/img/explosion/exp{num}.png").convert_alpha()
-            img = pygame.transform.scale(img,(img.get_width() * scale, img.get_height() * scale))
+            img = pygame.transform.scale(img, (img.get_width() * scale, img.get_height() * scale))
             self.images.append(img)
         self.index = 0
         self.image = self.images[self.index]
@@ -118,14 +155,11 @@ class Explosion(pygame.sprite.Sprite):
                 self.kill()
             else:
                 self.image = self.images[self.index]
-        
-        
-        
+
 explosion_group = pygame.sprite.Group()
 
 # Bullets class
 class Bullets(pygame.sprite.Sprite):
-    
     def __init__(self, x, y, direction, shooter):
         pygame.sprite.Sprite.__init__(self)
         self.speed = 10
@@ -156,10 +190,11 @@ class Bullets(pygame.sprite.Sprite):
 # Sprite groups
 bullets_group = pygame.sprite.Group()
 granade_group = pygame.sprite.Group()
+item_box_group = pygame.sprite.Group()
 
 # Soldier class
 class Soldier(pygame.sprite.Sprite):
-    def __init__(self, char_type, x, y, scale, speed, ammo,granades):
+    def __init__(self, char_type, x, y, scale, speed, ammo, granades):
         pygame.sprite.Sprite.__init__(self)
         self.char_type = char_type
         self.aliveplayer = True
@@ -250,7 +285,6 @@ class Soldier(pygame.sprite.Sprite):
             bullet = Bullets(self.rect.centerx + (0.6 * self.rect.size[0] * self.direction), self.rect.centery, self.direction, self.char_type)
             bullets_group.add(bullet)
             self.ammo -= 1
-              
 
     def update_animation(self):
         ANIMATION_COOLDOWN = 100
@@ -285,9 +319,17 @@ class Soldier(pygame.sprite.Sprite):
         screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
 
 # Create player and enemy
-player = Soldier("player", 200, 400, 3, 6, 20,5)
-enemy = Soldier("enemy", 400, 500, 3, 6, 20,0)
+player = Soldier("player", 200, 400, 3, 6, 20, 5)
+enemy = Soldier("enemy", 400, 600, 3, 6, 20, 0)
+enemy2 = Soldier("enemy", 600, 600, 3, 6, 20, 0)
 enemy_group.add(enemy)
+enemy_group.add(enemy2)
+
+# Create drop items
+ammo_drop = Drops(400, 600, "Ammo")
+health_drop = Drops(500, 600, "Health")
+grenade_drop = Drops(600, 600, "Grenade")
+item_box_group.add(ammo_drop, health_drop, grenade_drop)
 
 # Game loop
 run = True
@@ -297,9 +339,13 @@ while run:
     # Drawing
     drawbg()
     player.update()
-    enemy.update()
     player.draw()
-    enemy.draw()
+    item_box_group.update()
+    item_box_group.draw(screen)
+        
+    for enemy in enemy_group:
+        enemy.update()
+        enemy.draw()
 
     bullets_group.update()
     bullets_group.draw(screen)
