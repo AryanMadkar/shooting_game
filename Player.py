@@ -7,9 +7,9 @@ pygame.init()
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = int(SCREEN_WIDTH * 0.8)
 class Soldier(pygame.sprite.Sprite):
-    def __init__(self, char_type, x, y, scale, speed, ammo,granades):
+    def __init__(self, char_type, x, y, scale, speed, ammo,granades,screen):
         pygame.sprite.Sprite.__init__(self)
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.screen =screen
         self.char_type = char_type
         self.aliveplayer = True
         self.animation_list = []

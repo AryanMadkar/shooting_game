@@ -1,7 +1,7 @@
 import pygame 
 pygame.init()
 
-bullet_img = pygame.image.load("game/Shooter/img/icons/bullet.png").convert_alpha()
+bullet_img = pygame.image.load(r"game\Shooter\img\icons\bullet.png")
 from Player import player, enemy, SCREEN_WIDTH
 
 class Bullets(pygame.sprite.Sprite):
